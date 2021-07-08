@@ -22,29 +22,5 @@ namespace DisplayApp.Properties {
                 return defaultInstance;
             }
         }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("30.5")]
-        public float taktIdo {
-            get {
-                return ((float)(this["taktIdo"]));
-            }
-            set {
-                this["taktIdo"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public sbyte lineNu {
-            get {
-                return ((sbyte)(this["lineNu"]));
-            }
-            set {
-                this["lineNu"] = value;
-            }
-        }
     }
 }

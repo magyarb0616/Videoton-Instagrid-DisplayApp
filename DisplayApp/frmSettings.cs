@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static DisplayApp.Database;
 using DisplayApp;
+using System.Configuration;
+using System.Collections.Specialized;
 
 namespace DisplayApp
 {
@@ -25,18 +27,22 @@ namespace DisplayApp
             cmbLine.Items.Clear();
             cmbLine.Items.Add("AUTO-1");
             cmbLine.Items.Add("AUTO-2");
-            cmbLine.SelectedIndex = Properties.Settings.Default.lineNu;
+            try
+            {
+               // cmbLine.SelectedIndex = int.Parse(ConfigurationManager.AppSettings.Get("lineNo"));
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
             cmbLine.Enabled = true;
-            mtbTactIdo.Text = Properties.Settings.Default.taktIdo.ToString("#0.0");
+            //mtbTactIdo.Text = float.Parse(ConfigurationManager.AppSettings.Get("tactTime")).ToString("#0.0");
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Properties.Settings.Default.taktIdo = float.Parse(mtbTactIdo.Text);
-            Properties.Settings.Default.lineNu = (sbyte)cmbLine.SelectedIndex;
-            Properties.Settings.Default.Save();
             this.DialogResult = System.Windows.Forms.DialogResult.OK;
-            //this.Close();
         }
     }
 }
