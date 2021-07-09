@@ -22,7 +22,6 @@ namespace DisplayApp
             }
             catch (Exception)
             {
-
                 throw;
             }
             cmbLine.Enabled = true;

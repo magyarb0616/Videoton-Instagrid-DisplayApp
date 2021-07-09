@@ -71,11 +71,11 @@ namespace DisplayApp
             this.lblLine.AutoSize = true;
             this.lblLine.Font = new System.Drawing.Font("Microsoft Sans Serif", 40F);
             this.lblLine.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(1)))), ((int)(((byte)(0)))), ((int)(((byte)(101)))));
-            this.lblLine.Location = new System.Drawing.Point(1452, 3);
+            this.lblLine.Location = new System.Drawing.Point(1405, 3);
             this.lblLine.Name = "lblLine";
-            this.lblLine.Size = new System.Drawing.Size(295, 92);
+            this.lblLine.Size = new System.Drawing.Size(388, 92);
             this.lblLine.TabIndex = 2;
-            this.lblLine.Text = "label2";
+            this.lblLine.Text = "No Data";
             // 
             // label3
             // 
