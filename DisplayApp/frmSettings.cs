@@ -1,16 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static DisplayApp.Database;
-using DisplayApp;
-using System.Configuration;
-using System.Collections.Specialized;
+using static DisplayApp.frmMain;
 
 namespace DisplayApp
 {
@@ -19,7 +9,6 @@ namespace DisplayApp
         public frmSettings()
         {
             InitializeComponent();
-            
         }
 
         private void frmSettings_Load(object sender, EventArgs e)
@@ -29,7 +18,7 @@ namespace DisplayApp
             cmbLine.Items.Add("AUTO-2");
             try
             {
-               // cmbLine.SelectedIndex = int.Parse(ConfigurationManager.AppSettings.Get("lineNo"));
+                cmbLine.SelectedIndex = mySettings.LineNo;
             }
             catch (Exception)
             {
@@ -37,11 +26,14 @@ namespace DisplayApp
                 throw;
             }
             cmbLine.Enabled = true;
-            //mtbTactIdo.Text = float.Parse(ConfigurationManager.AppSettings.Get("tactTime")).ToString("#0.0");
+            mtbTactIdo.Text = mySettings.TactTime.ToString("#0.0");
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            mySettings.LineNo = cmbLine.SelectedIndex;
+            mySettings.TactTime = float.Parse(mtbTactIdo.Text);
+            mySettings.SaveSettings();
             this.DialogResult = System.Windows.Forms.DialogResult.OK;
         }
     }

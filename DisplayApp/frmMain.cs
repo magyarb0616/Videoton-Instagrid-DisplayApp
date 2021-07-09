@@ -1,38 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static DisplayApp.Database;
 using MySql.Data.MySqlClient;
-using System.Configuration;
-using System.Collections.Specialized;
-
+using System.IO;
+using System.Reflection;
 
 namespace DisplayApp
 {
     public partial class frmMain : Form
     {
-        string msgConsole = "";
-        string server = ConfigurationManager.AppSettings.Get("server");
-        string database = ConfigurationManager.AppSettings.Get("database");
-        string user = ConfigurationManager.AppSettings.Get("user");
-        string password = ConfigurationManager.AppSettings.Get("password");
-        string port = ConfigurationManager.AppSettings.Get("port");
+        int counter = 0;
         DateTime date, pBegin, pEnd;
+        public static Settings mySettings = new Settings();
+
         
         public frmMain()
         {
             InitializeComponent();
-            addMSG("Started!");
-            dbDate();
-            //label2.Text = "AUTO-" + ((int.Parse(ConfigurationManager.AppSettings.Get("lineNo"))) + 1).ToString();
-            //label2.Text = "AUTO-" + ConfigurationManager.AppSettings.Get("lineNo");
+            mySettings.LoadSettings();
             ShiftCalc();
+            UpdateStats();
+            lblLine.Text = "AUTO-" + (mySettings.LineNo + 1).ToString();
+            //addMSG("Started!");
+            //addMSG("Running from:" + Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
+
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
@@ -41,7 +31,8 @@ namespace DisplayApp
             {
                 if (frm.ShowDialog() == DialogResult.OK)
                 {
-                    label2.Text = "AUTO-" + ((int.Parse(ConfigurationManager.AppSettings.Get("lineNo"))) + 1).ToString();
+                    lblLine.Text = "AUTO-" + (mySettings.LineNo + 1).ToString();
+                    UpdateStats();
                 }
             }
         }
@@ -52,15 +43,13 @@ namespace DisplayApp
 
         }
 
-        private int dbQuantity(DateTime begin,DateTime end)
-        {
-            String connectionString = String.Format("server={0};port={1};user id={2}; password={3}; database={4}", server, port, user, password, database);
-            MySqlConnection conn = new MySqlConnection(connectionString);
-
+        private int dbQuantity()
+        {//elkészűlt darabszám lekérése a jelenlegi műszakból
+            MySqlConnection conn = new MySqlConnection(mySettings.ConnectionString);
             try
             {
                 conn.Open();
-                string sql = "SELECT COUNT(*) as db FROM `products` WHERE `FinishDate` >= '" + begin.ToString("yyyy-MM-dd HH:mm:ss") + "' and `FinishDate` < '" + end.ToString("yyyy-MM-dd HH:mm:ss") + "';";
+                string sql = "SELECT COUNT(*) as db FROM `products` WHERE `FinishDate` >= '" + pBegin.ToString("yyyy-MM-dd HH:mm:ss") + "' and `FinishDate` < '" + pEnd.ToString("yyyy-MM-dd HH:mm:ss") + "';";
                 MySqlCommand cmd = new MySqlCommand(sql, conn);
                 MySqlDataReader rdr = cmd.ExecuteReader();
                 int adat = 0;
@@ -75,15 +64,12 @@ namespace DisplayApp
             catch (Exception ex)
             {
                 LogException(ex);
-                addMSG("DB quantity: "+ex.Message);
                 return -1;
             }
         }
         private void dbDate()
-        {
-            String connectionString = String.Format("server={0};port={1};user id={2}; password={3}; database={4}", server, port, user, password, database);
-            MySqlConnection conn = new MySqlConnection(connectionString);
- 
+        {//dátum és idő frissítése a form-on, és az aktuális idő frissítése a date változóban.
+            MySqlConnection conn = new MySqlConnection(mySettings.ConnectionString);
             try
             {
                 conn.Open();
@@ -98,40 +84,89 @@ namespace DisplayApp
                 rdr.Close();
                 conn.Close();
                 date = DateTime.Parse(adat);
-                //string[] datefrag = date.split('.');
-                //label3.text = datefrag[0]+ "." + datefrag[1]+ "." + datefrag[2];
-                //label4.text = datefrag[3];
                 label3.Text = date.ToShortDateString();
                 label4.Text = date.ToLongTimeString();
             }
             catch (Exception ex)
             {
-                LogException(ex);
-                addMSG("DB date:"+ex.Message);
-                
+                LogException(ex);                
             }
         }
 
+        private int timedplanCalc(int TimeCorrection)
+        {// időtől függő cél-darabszám számítása (szünetek figyelembevétele)
+            try
+            {
+                double seconds = (date - pBegin).TotalSeconds;
+                if (seconds > 13200)
+                    seconds -= ((TimeCorrection / 3) * 120);
+
+                if (seconds > 18000)
+                    seconds -= ((TimeCorrection / 3) * 60);
+
+                double calcQty = seconds / mySettings.TactTime;
+                return (int)calcQty;
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+                return -1;
+            }
+        }
+
+        private int PlanedQtyCalc(int TimeCorrection)
+        {//cél darabszám kiszámítása
+            try
+            {
+                ShiftCalc();
+                double seconds = (pEnd - pBegin).TotalSeconds - TimeCorrection * 60;
+                double calcQty = seconds / mySettings.TactTime;
+                return (int)calcQty;
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+                return -1;
+            }
+        }
+
+        private int efficiencyCalc()
+        {//hatékonyság kiszámítása
+            int OkProductQty, prodqtyplan;
+
+            OkProductQty = dbQuantity();
+            prodqtyplan = timedplanCalc(30);
+            lblActQuantity.Text = OkProductQty.ToString();
+            lblTimedPlan.Text = prodqtyplan.ToString();
+            float temp;
+            if (prodqtyplan > 0)
+            {
+                temp = ((float)OkProductQty / (float)prodqtyplan) * 100;
+                return (int)temp;
+            }
+            return 0;
+        }
         private void timer_Tick(object sender, EventArgs e)
         {
-            dbDate();
-            addMSG(dbQuantity(pBegin, pEnd).ToString());
-
+            ShiftCalc();
+            counter++;
+            if (counter >= 10) //hány másodpercenként ellenőrizze/frissítse a statisztikát
+            {
+                UpdateStats();
+                counter = 0;
+            }
         }
 
-        private void addMSG(string msg)
+        private void UpdateStats()
         {
-            string seged = kisConsole.Text;
-            string newLine = Environment.NewLine;
-            seged = seged + newLine + msg;
-            kisConsole.Text = seged;
+            lblPlanQuantity.Text =  PlanedQtyCalc(30).ToString();
+            lblEffic.Text = efficiencyCalc().ToString() + " %";
         }
-
         private void ShiftCalc()
         {
             dbDate();
             if (date!= null)
-            {
+            {//megmondja melyik műszakban vagyunk, beállítja a műszak kezdő és végző időpontját
                 if (date.TimeOfDay < TimeSpan.Parse("06:00:00") || date.TimeOfDay > TimeSpan.Parse("21:59:59"))
                 {
                     pBegin = date.AddDays(-1).Date.Add(TimeSpan.Parse("22:00:00"));
@@ -149,7 +184,25 @@ namespace DisplayApp
                 }
             }
             
-            addMSG("pBegin=" + pBegin + ", pEnd=" + pEnd);
+            //addMSG("pBegin=" + pBegin + ", pEnd=" + pEnd);
+        }
+        
+        //private void addMSG(string msg)
+        //{//debug helper
+        //    string seged = kisConsole.Text;
+        //    string newLine = Environment.NewLine;
+        //    seged = msg + newLine + seged;
+        //    kisConsole.Text = seged;
+        //}
+
+        //Exception Logging
+        public static void LogException(Exception e)
+        {
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(@"Error.log", true))
+            {
+                file.WriteLine("******\r\n Source: " + e.Message + "\r\n");
+            }
+
         }
     }
 }
