@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
 using MySql.Data.MySqlClient;
-using System.IO;
-using System.Reflection;
 
 namespace DisplayApp
 {
@@ -159,29 +157,45 @@ namespace DisplayApp
 
         private void UpdateStats()
         {
-            lblPlanQuantity.Text =  PlanedQtyCalc(30).ToString();
-            lblEffic.Text = efficiencyCalc().ToString() + " %";
+            try
+            {
+                lblPlanQuantity.Text = PlanedQtyCalc(30).ToString();
+                lblEffic.Text = efficiencyCalc().ToString() + "%";
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+            }
+            
         }
         private void ShiftCalc()
         {
-            dbDate();
-            if (date!= null)
-            {//megmondja melyik műszakban vagyunk, beállítja a műszak kezdő és végző időpontját
-                if (date.TimeOfDay < TimeSpan.Parse("06:00:00") || date.TimeOfDay > TimeSpan.Parse("21:59:59"))
-                {
-                    pBegin = date.AddDays(-1).Date.Add(TimeSpan.Parse("22:00:00"));
-                    pEnd = date.Date.Add(TimeSpan.Parse("05:59:59"));
+            try
+            {
+                dbDate();
+                if (date != null)
+                {//megmondja melyik műszakban vagyunk, beállítja a műszak kezdő és végző időpontját
+                    if (date.TimeOfDay < TimeSpan.Parse("06:00:00") || date.TimeOfDay > TimeSpan.Parse("21:59:59"))
+                    {
+                        pBegin = date.AddDays(-1).Date.Add(TimeSpan.Parse("22:00:00"));
+                        pEnd = date.Date.Add(TimeSpan.Parse("05:59:59"));
+                    }
+                    else if (date.TimeOfDay < TimeSpan.Parse("14:00:00"))
+                    {
+                        pBegin = date.Date.Add(TimeSpan.Parse("06:00:00"));
+                        pEnd = date.Date.Add(TimeSpan.Parse("13:59:59"));
+                    }
+                    else
+                    {
+                        pBegin = date.Date.Add(TimeSpan.Parse("14:00:00"));
+                        pEnd = date.Date.Add(TimeSpan.Parse("21:59:59"));
+                    }
                 }
-                else if (date.TimeOfDay < TimeSpan.Parse("14:00:00"))
-                {
-                    pBegin = date.Date.Add(TimeSpan.Parse("06:00:00"));
-                    pEnd = date.Date.Add(TimeSpan.Parse("13:59:59"));
-                }
-                else
-                {
-                    pBegin = date.Date.Add(TimeSpan.Parse("14:00:00"));
-                    pEnd = date.Date.Add(TimeSpan.Parse("21:59:59"));
-                }
+            }
+            catch (Exception ex)
+            {
+                LogException(ex);
+                throw;
             }
             
             //addMSG("pBegin=" + pBegin + ", pEnd=" + pEnd);

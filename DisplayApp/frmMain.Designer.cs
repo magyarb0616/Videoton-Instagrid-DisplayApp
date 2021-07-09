@@ -281,6 +281,7 @@ namespace DisplayApp
             this.BackColor = System.Drawing.SystemColors.Window;
             this.ClientSize = new System.Drawing.Size(1896, 1016);
             this.Controls.Add(this.tableLayoutPanel1);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "frmMain";
             this.Text = "Eredmény Kijelző";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
