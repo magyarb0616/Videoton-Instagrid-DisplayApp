@@ -14,8 +14,7 @@ namespace DisplayApp
         private void frmSettings_Load(object sender, EventArgs e)
         {
             cmbLine.Items.Clear();
-            cmbLine.Items.Add("AUTO-1");
-            cmbLine.Items.Add("AUTO-2");
+            cmbLine.Items.Add("SOR-1");
             try
             {
                 cmbLine.SelectedIndex = mySettings.LineNo;

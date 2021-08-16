@@ -1,26 +1,28 @@
 ﻿using System;
+using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 using MySql.Data.MySqlClient;
 
 namespace DisplayApp
 {
-    public partial class frmMain : Form
+	public partial class frmMain : Form
     {
         int counter = 0;
         DateTime date, pBegin, pEnd;
         public static Settings mySettings = new Settings();
-
+        public Boolean noError = true;
         
         public frmMain()
         {
             InitializeComponent();
-            mySettings.LoadSettings();
-            ShiftCalc();
-            UpdateStats();
-            lblLine.Text = "AUTO-" + (mySettings.LineNo + 1).ToString();
-            //addMSG("Started!");
-            //addMSG("Running from:" + Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
-
+			if (!mySettings.LoadSettings()) 
+            { 
+                noError = false;
+                var result = System.Windows.Forms.MessageBox.Show("Hiba a beállítások betöltése közben!" + "\n" + "Check Error.log for more information!", "Hiba", System.Windows.Forms.MessageBoxButtons.OK);
+                if(result == DialogResult.OK) { System.Environment.Exit(1); }
+            }
+            lblLine.Text = "SOR-" + (mySettings.LineNo + 1).ToString();
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
@@ -29,7 +31,7 @@ namespace DisplayApp
             {
                 if (frm.ShowDialog() == DialogResult.OK)
                 {
-                    lblLine.Text = "AUTO-" + (mySettings.LineNo + 1).ToString();
+                    lblLine.Text = "SOR-" + (mySettings.LineNo + 1).ToString();
                     UpdateStats();
                 }
             }
@@ -134,12 +136,12 @@ namespace DisplayApp
 
             OkProductQty = dbQuantity();
             prodqtyplan = timedplanCalc(30);
-            lblActQuantity.Text = OkProductQty.ToString();
-            lblTimedPlan.Text = prodqtyplan.ToString();
-            float temp;
+            if(OkProductQty != -1) { lblActQuantity.Text = OkProductQty.ToString(); }
+            if (prodqtyplan != -1) { lblTimedPlan.Text = prodqtyplan.ToString(); }
+
             if (prodqtyplan > 0)
             {
-                temp = ((float)OkProductQty / (float)prodqtyplan) * 100;
+                var temp = ((float)OkProductQty / (float)prodqtyplan) * 100;
                 return (int)temp;
             }
             return 0;
@@ -150,6 +152,7 @@ namespace DisplayApp
             counter++;
             if (counter >= 10) //hány másodpercenként ellenőrizze/frissítse a statisztikát
             {
+
                 UpdateStats();
                 counter = 0;
             }
@@ -159,7 +162,8 @@ namespace DisplayApp
         {
             try
             {
-                lblPlanQuantity.Text = PlanedQtyCalc(30).ToString();
+                var planquan = PlanedQtyCalc(30);
+                if(planquan != -1) { lblPlanQuantity.Text = planquan.ToString(); }
                 lblEffic.Text = efficiencyCalc().ToString() + "%";
             }
             catch (Exception ex)
@@ -170,35 +174,41 @@ namespace DisplayApp
         }
         private void ShiftCalc()
         {
-            try
-            {
-                dbDate();
-                if (date != null)
-                {//megmondja melyik műszakban vagyunk, beállítja a műszak kezdő és végző időpontját
-                    if (date.TimeOfDay < TimeSpan.Parse("06:00:00") || date.TimeOfDay > TimeSpan.Parse("21:59:59"))
-                    {
-                        pBegin = date.AddDays(-1).Date.Add(TimeSpan.Parse("22:00:00"));
-                        pEnd = date.Date.Add(TimeSpan.Parse("05:59:59"));
-                    }
-                    else if (date.TimeOfDay < TimeSpan.Parse("14:00:00"))
-                    {
-                        pBegin = date.Date.Add(TimeSpan.Parse("06:00:00"));
-                        pEnd = date.Date.Add(TimeSpan.Parse("13:59:59"));
-                    }
-                    else
-                    {
-                        pBegin = date.Date.Add(TimeSpan.Parse("14:00:00"));
-                        pEnd = date.Date.Add(TimeSpan.Parse("21:59:59"));
+			if (noError)
+			{
+                try
+                {
+                    dbDate();
+                    if (date != null && !date.Equals("0001.01.01 0:00:00"))
+                    {//megmondja melyik műszakban vagyunk, beállítja a műszak kezdő és végző időpontját
+                        if (date.TimeOfDay < TimeSpan.Parse("06:00:00") || date.TimeOfDay > TimeSpan.Parse("21:59:59"))
+                        {
+                            pBegin = date.AddDays(-1).Date.Add(TimeSpan.Parse("22:00:00"));
+                            pEnd = date.Date.Add(TimeSpan.Parse("05:59:59"));
+                        }
+                        else if (date.TimeOfDay < TimeSpan.Parse("14:00:00"))
+                        {
+                            pBegin = date.Date.Add(TimeSpan.Parse("06:00:00"));
+                            pEnd = date.Date.Add(TimeSpan.Parse("13:59:59"));
+                        }
+                        else
+                        {
+                            pBegin = date.Date.Add(TimeSpan.Parse("14:00:00"));
+                            pEnd = date.Date.Add(TimeSpan.Parse("21:59:59"));
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    noError = false;
+                    LogException(ex);
+                    var result=MessageBox.Show("Database connection error!" + "\n" + "Check Error.log for more information!", "Error", MessageBoxButtons.RetryCancel);
+                    if(result == DialogResult.Retry) { noError = true; }
+                    if(result == DialogResult.Cancel) { System.Environment.Exit(1); }
+
+                }
             }
-            catch (Exception ex)
-            {
-                LogException(ex);
-                throw;
-            }
-            
-            //addMSG("pBegin=" + pBegin + ", pEnd=" + pEnd);
+
         }
         
         //private void addMSG(string msg)
@@ -210,11 +220,31 @@ namespace DisplayApp
         //}
 
         //Exception Logging
-        public static void LogException(Exception e)
+        public static void LogException(Exception ex)
         {
-            using (System.IO.StreamWriter file = new System.IO.StreamWriter(@"Error.log", true))
-            {
-                file.WriteLine("******\r\n Source: " + e.Message + "\r\n");
+			try
+			{
+                File.AppendAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + @"/Error.log"
+                ,ex.Message + "\n" +"-----------------------------------------"+"\n");
+			}
+			catch(Exception)
+			{
+                System.Environment.Exit(1);
+            }
+            
+
+        }
+
+        public static void LogException(string msg, Exception ex)
+        {
+			try
+			{
+                File.AppendAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)+ @"/Error.log"
+                ,msg + "\n" + ex.Message + "\n" +"-----------------------------------------"+"\n");
+			}
+			catch(Exception)
+			{
+                System.Environment.Exit(1);
             }
 
         }

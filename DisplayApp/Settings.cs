@@ -14,7 +14,7 @@ namespace DisplayApp
         private string _connectionString;
 
         //raspberrypi/linux-nál (úgytűnik windowsnál is működik ez a formátum)( / ):
-        private string inipath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)+@"/settings.ini";
+        private string inipath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + @"/settings.ini";
         //windowsnál ( \ ):
         //private string inipath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + @"\settings.ini";
 
@@ -27,54 +27,62 @@ namespace DisplayApp
         public string Port { get => _port; set => _port = value; }
         public string ConnectionString { get => _connectionString; set => _connectionString = value; }
 
-        public void LoadSettings()
+        public bool LoadSettings()
         {
             var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile(inipath);
-
-            LineNo = int.Parse(data["settings"]["line"]);
-            TactTime = float.Parse(data["settings"]["tactTime"]);
-            Address = data["database"]["address"];
-            Database = data["database"]["database"];
-            User = data["database"]["user"];
-            Password = data["database"]["password"];
-            Port = data["database"]["port"];
-
-            ConnectionString = String.Format("server={0};port={1};user id={2}; password={3}; database={4}", Address, Port, User, Password, Database);
-        }
-
-        public void SaveSettings()
-        {
-            var parser = new FileIniDataParser();
-            IniData data = new IniData();
             try
             {
-                data["settings"]["line"] = LineNo.ToString();
-                parser.WriteFile(inipath, data);
+                IniData data = parser.ReadFile(inipath);
 
-                data["settings"]["tactTime"] = TactTime.ToString("#0.0");
-                parser.WriteFile(inipath, data);
+                LineNo = int.Parse(data["settings"]["line"]);
+                TactTime = float.Parse(data["settings"]["tactTime"]);
+                Address = data["database"]["address"];
+                Database = data["database"]["database"];
+                User = data["database"]["user"];
+                Password = data["database"]["password"];
+                Port = data["database"]["port"];
 
-                data["database"]["address"] = Address;
-                parser.WriteFile(inipath, data);
-
-                data["database"]["database"] = Database;
-                parser.WriteFile(inipath, data);
-
-                data["database"]["port"] = Port;
-                parser.WriteFile(inipath, data);
-
-                data["database"]["user"] = User;
-                parser.WriteFile(inipath, data);
-
-                data["database"]["password"] = Password;
-                parser.WriteFile(inipath, data);
-            }
-            catch(Exception ex)
+                ConnectionString = String.Format("server={0};port={1};user id={2}; password={3}; database={4}", Address, Port, User, Password, Database);
+                return true;
+            } catch (Exception ex)
             {
-                LogException(ex);
+                LogException("Hiba a beállítások betöltése közben!", ex);
+                return false;
+                }
             }
-            
+
+            public void SaveSettings()
+            {
+                var parser = new FileIniDataParser();
+                IniData data = new IniData();
+                try
+                {
+                    data["settings"]["line"] = LineNo.ToString();
+                    parser.WriteFile(inipath, data);
+
+                    data["settings"]["tactTime"] = TactTime.ToString("#0.0");
+                    parser.WriteFile(inipath, data);
+
+                    data["database"]["address"] = Address;
+                    parser.WriteFile(inipath, data);
+
+                    data["database"]["database"] = Database;
+                    parser.WriteFile(inipath, data);
+
+                    data["database"]["port"] = Port;
+                    parser.WriteFile(inipath, data);
+
+                    data["database"]["user"] = User;
+                    parser.WriteFile(inipath, data);
+
+                    data["database"]["password"] = Password;
+                    parser.WriteFile(inipath, data);
+                }
+                catch (Exception ex)
+                {
+                    LogException(ex);
+                }
+
+            }
         }
-    }
 }
